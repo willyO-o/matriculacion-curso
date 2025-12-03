@@ -36,13 +36,13 @@ class EstudianteController extends Controller
                 })
                 ->editColumn('estado', function ($estudiante) {
                     $tipo = $estudiante->estado == 'ACTIVO' ? 'btn-success' : 'btn-danger';
-                    return '<button type="button" class="botonEstado btn btn-sm ' . $tipo . '"  value="'.route('estudiante.update', $estudiante->id).'" > ' . $estudiante->estado . '</button>';
+                    return '<button type="button" class="botonEstado btn btn-sm ' . $tipo . '"  value="' . route('estudiante.update', $estudiante->id) . '" > ' . $estudiante->estado . '</button>';
                 })
-                ->editColumn('id', function($estudiante){
-                    return '<button class="btn btn-primary btn-sm botonEditar" value="'.$estudiante->id.'">Editar</button>
-                            <button class="btn btn-danger btn-sm botonEliminar" value="'.route('estudiante.destroy', $estudiante->id).'">eliminar</button>';
+                ->editColumn('id', function ($estudiante) {
+                    return '<button class="btn btn-primary btn-sm botonEditar" value="' . route('estudiante.edit', $estudiante->id) . '">Editar</button>
+                            <button class="btn btn-danger btn-sm botonEliminar" value="' . route('estudiante.destroy', $estudiante->id) . '">eliminar</button>';
                 })
-                ->rawColumns(['foto','estado','id'])
+                ->rawColumns(['foto', 'estado', 'id'])
                 ->make(true);
         }
 
@@ -55,7 +55,7 @@ class EstudianteController extends Controller
      */
     public function create()
     {
-        $html = view('estudiante.form')->render();
+        $html = view('estudiante.form', ['estudiante' => new Estudiante()])->render();
 
         return response()->json(['html' => $html]);
     }
@@ -83,24 +83,24 @@ class EstudianteController extends Controller
         $estudiante = Estudiante::create($datos);
 
 
-
-        return $estudiante;
+        return response()->json(['mensaje' => 'Estudiante creado correctamente.']);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
-    {
-    }
+    public function show(string $id) {}
 
     /**
      * Show the form for editing the specified resource.
      */
     public function edit(string $id)
     {
-                return 'mostrando el estudiante con id: '.$id;
+        $estudiante = Estudiante::findOrFail($id);
 
+        $html = view('estudiante.form', compact('estudiante'))->render();
+
+        return response()->json(['html' => $html]);
     }
 
     /**
@@ -111,12 +111,44 @@ class EstudianteController extends Controller
 
         $estudiante = Estudiante::findOrFail($id);
 
-        if($request->isMethod('patch')){
+        if ($request->isMethod('patch')) {
             $estudiante->estado = $request->estado;
             $estudiante->save();
             return response()->json(['mensaje' => 'Estado actualizado correctamente.']);
         }
 
+
+        # en caso de que sea metodo PUT se ejecuta este bloque
+
+        $rules = Estudiante::$rules;
+        $rules['ci'] =  'required|string|max:20|unique:estudiante,ci,' . $id;
+
+        $request->validate($rules);
+
+        $imagenAnterior = $estudiante->foto;
+
+        $estudiante->fill($request->all());
+
+        if ($request->file('foto')) {
+            $fotografia = $request->file('foto');
+            $nombreFoto =  date('YmdHis') . '_' . uniqid() . '.' . $fotografia->getClientOriginalExtension();
+            if (!file_exists(storage_path('app/public/fotos_estudiantes'))) {
+                mkdir(storage_path('app/public/fotos_estudiantes'), 0755, true);
+            }
+
+
+            $fotografia->move(storage_path('app/public/fotos_estudiantes'), $nombreFoto);
+            $estudiante->foto = $nombreFoto;
+
+            if (file_exists(storage_path('app/public/fotos_estudiantes/' . $imagenAnterior))) {
+                unlink(storage_path('app/public/fotos_estudiantes/' . $imagenAnterior));
+            }
+        }
+
+
+        $estudiante->save();
+
+        return response()->json(['mensaje' => 'Estudiante actualizado correctamente.']);
     }
 
     /**
@@ -126,13 +158,36 @@ class EstudianteController extends Controller
     {
         $estudiante = Estudiante::findOrFail($id);
 
-        if (file_exists(storage_path('app/public/fotos_estudiantes/'.$estudiante->foto))){
-            unlink(storage_path('app/public/fotos_estudiantes/'.$estudiante->foto));
+        if (file_exists(storage_path('app/public/fotos_estudiantes/' . $estudiante->foto))) {
+            unlink(storage_path('app/public/fotos_estudiantes/' . $estudiante->foto));
         }
 
         $estudiante->delete();
 
 
         return response()->json(['mensaje' => 'Estudiante eliminado correctamente.']);
+    }
+
+    public function buscarEstudiantes(Request $request)
+    {
+
+        $termino = $request->get('term','');
+
+        $termino = '%' . $termino . '%';
+
+
+        $estudiantes = Estudiante::selectRaw("id, CONCAT(nombre,' ',paterno,' ',materno,' - ',ci) AS text")
+        ->where('nombre', 'LIKE',$termino)
+        ->orWhere('paterno', 'LIKE',$termino)
+        ->orWhere('materno', 'LIKE',$termino)
+        ->orWhere('ci', 'LIKE',$termino)
+        ->orWhereRaw("CONCAT(nombre,' ',paterno,' ',materno) LIKE ?", [$termino])
+        ->orWhereRaw("CONCAT(paterno,' ',materno,' ',nombre) LIKE ?", [$termino])
+        ->orWhereRaw("CONCAT(paterno,' ',materno,' ',nombre) LIKE ?", [$termino])
+        ->limit(10)
+        ->get();
+
+        return response()->json(['results' => $estudiantes]);
+
     }
 }

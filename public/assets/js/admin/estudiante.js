@@ -6,7 +6,7 @@ $(function () {
 
 
     let tablaEstudiantes = $('#tablaEstudiantes').DataTable({
-        language:{
+        language: {
             url: 'https://cdn.datatables.net/plug-ins/2.3.5/i18n/es-ES.json'
         },
         processing: true,
@@ -81,7 +81,22 @@ $(function () {
                 tablaEstudiantes.ajax.reload();
             })
 
-        });
+        })
+        .on('click', '.botonEditar', function (evento) {
+            evento.preventDefault();
+
+            const urlProcesar = $(this).val()
+
+            modaEstudiante.show();
+
+            $.get(urlProcesar)
+                .done(function (data) {
+
+                    $('#modalEstudiante .modal-content').html(data.html);
+                })
+
+
+        })
 
 
     $('#btnRegistrar').on('click', function () {
@@ -90,7 +105,6 @@ $(function () {
 
         $.get('/estudiante/create')
             .done(function (data) {
-                console.log(data);
 
                 $('#modalEstudiante .modal-content').html(data.html);
             })
@@ -119,7 +133,7 @@ $(function () {
 
             Swal.fire({
                 title: "Exitoso!",
-                text: "Estudiante registrado correctamente",
+                text: respuesta.mensaje,
                 icon: "success"
             });
 
