@@ -11,4 +11,11 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-Route::resource('estudiante', EstudianteController::class);
+
+Route::group(['prefix'=>'','middleware'=> 'auth'], function(){
+
+    Route::resource('estudiante', EstudianteController::class);
+
+
+    //
+});
