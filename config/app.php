@@ -123,4 +123,20 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+
+
+
+    #--------------------------------------------------------------------------
+    #constantes del sistema
+
+    'APP_DATA'=> [
+        'NOMBRE_EMPRESA' => 'Mi Empresa S.A.C.',
+        'RUC_EMPRESA' => '20123456789',
+        'DIRECCION_EMPRESA' => 'Av. Siempre Viva 123, Ciudad',
+        'TELEFONO_EMPRESA' => '+51 987654321',
+        'EMAIL_EMPRESA' => 'info@miempresa.com',
+        'APP_NAME' => 'Sistema de Matriculación',
+        'APP_VERSION' => '1.0.0',
+
+    ]
 ];

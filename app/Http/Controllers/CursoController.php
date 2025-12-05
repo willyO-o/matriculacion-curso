@@ -4,8 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Curso;
-
 use DataTables;
+
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
+require_once base_path('vendor/setasign/fpdf/fpdf.php');
+
+use FPDF;
 
 class CursoController extends Controller
 {
@@ -106,8 +111,6 @@ class CursoController extends Controller
 
 
         return response()->json(['html' => $html]);
-
-
     }
 
     public function procesarMatricula(Request $request)
@@ -128,14 +131,62 @@ class CursoController extends Controller
             ]
         );
 
-
-
-
-
-        return response()->json(['mensaje' => 'Estudiante matriculado correctamente.']);
-
-
-
+        return response()->json([
+            'mensaje' => 'Estudiante matriculado correctamente.',
+            'datos' =>[
+                'idCurso' => $idCurso,
+                'idEstudiante' => $request->input('id_estudiante')
+            ]]
+        );
     }
 
+
+    public function generarPDF($idCurso, $idEstudiante)
+    {
+
+
+
+
+
+        $curso = Curso::findOrFail($idCurso);
+        $estudiante = $curso->estudiantes()->where('id_estudiante', $idEstudiante)->first();
+
+        $textoQr = url('verificar-matricula/' . $curso->id . '/' . $estudiante->id);
+        $codigoQr = "data:image/png;base64," . base64_encode(QrCode::encoding('UTF-8')->size(400)->format('png')->generate($textoQr));
+
+
+        #definimos posiciones y dimensiones
+        $pdf = new FPDF('P', 'mm', [100, 140]);
+
+        #agregamos una pagina
+        $pdf->AddPage();
+
+        $pdf->image(public_path('/assets/fondos/fondo.png'), 0, 0, 100, 70, 'PNG');
+
+        $pdf->image(public_path('/assets/fondos/fondo.png'), 0, 70, 100, 70, 'PNG');
+
+        // definimos la fuente
+        $pdf->SetFont('Arial', 'B', 14);
+        $pdf->SetXY(28, 32);
+
+        $nombreCompleto = mb_convert_encoding("{$estudiante->nombre} {$estudiante->paterno} {$estudiante->materno}", 'ISO-8859-1', 'UTF-8');
+
+        $pdf->Cell(40, 10, $nombreCompleto);
+
+        $fotoEstudiante = storage_path('app/public/fotos_estudiantes') . '/' . $estudiante->foto;
+
+
+        $pdf->image($fotoEstudiante, 5, 22, 20, 25, 'png');
+
+
+        $textoQr = url('verificar-matricula/' . $curso->id . '/' . $estudiante->id);
+
+        $codigoQr = "data:image/png;base64," . base64_encode(QrCode::encoding('UTF-8')->size(400)->format('png')->generate($textoQr));
+
+        $pdf->image($codigoQr, 75, 45, 20, 20, 'png');
+
+        $pdf->Output();
+
+        exit;
+    }
 }

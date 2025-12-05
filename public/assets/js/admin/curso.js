@@ -34,10 +34,10 @@ $(function () {
 
                     $('#modalCurso .modal-content').html(data.html);
 
-
+                    // incializamos el select2 para el select de estudiantes
                     $('#selectEstudiante').select2({
                         dropdownParent: $('#modalCurso .modal-content'),
-
+                        minimumInputLength: 2,
                         ajax: {
                             url: '/estudiante-buscar',
 
@@ -88,12 +88,17 @@ $(function () {
             $.post(urlProcesar, datos)
                 .done(function (respuesta) {
 
-                    console.log("respuesta del servidor: ", respuesta);
+                    tablaCursos.ajax.reload();
+
+                    modalCurso.hide();
+
+                    Swal.fire('Éxito', respuesta.mensaje, 'success');
+
                 })
 
 
         })
-        .on('click', '#formMatricular',function(evento){
+        .on('submit', '#formMatricular',function(evento){
             evento.preventDefault();
 
             let formulario = $(this);
@@ -103,7 +108,15 @@ $(function () {
             $.post(formulario.attr('action'), datos)
                 .done(function (respuesta) {
 
-                    console.log("respuesta del servidor: ", respuesta);
+                     modalCurso.hide();
+                     Swal.fire('Éxito', respuesta.mensaje, 'success');
+
+                    let urlPdf =  window.location.origin + '/matricula-pdf/' + respuesta.datos.idCurso + '/' + respuesta.datos.idEstudiante;
+
+                    window.open(urlPdf, '_blank', 'width=800,height=600');
+
+
+
                 })
 
         })
